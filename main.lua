@@ -7,6 +7,23 @@ GrindGoalsDB = GrindGoalsDB or {}
 -- This global is for saving which frame displays on top
 GrindGoalsTopmostFrame = nil
 
+-- Function that checks how many of certan item player has in his bags
+local function countItemsInBags(itemID)
+    if itemID == nil then
+        return nil
+    end
+    local count = 0
+    for bag = 0, 5 do -- Loop through all bags
+        for slot = 1, C_Container.GetContainerNumSlots(bag) do -- Loop through all slots in the bag
+            local id = C_Container.GetContainerItemID(bag, slot)
+            if id == itemID then
+                count = count + C_Container.GetContainerItemInfo(bag, slot).stackCount
+            end
+        end
+    end
+    return count
+end
+
 --Create main frame for addon
 GrindGoals.mainFrame = CreateFrame("Frame", "GrindGoalsMainFrame", UIParent, "BasicFrameTemplateWithInset")
 GrindGoals.mainFrame:SetSize(400, 250)
@@ -98,17 +115,16 @@ SlashCmdList["GRINDGOALS"] = function(msg)
     end
 end
 
--- On hide.
-GrindGoals.mainFrame:SetScript("OnHide", function()
+
+GrindGoals.mainFrame:SetScript("OnHide", function() -- On hide.
+    PlaySound(808)
+end)
+GrindGoals.mainFrame:SetScript("OnShow", function() -- On show.
     PlaySound(808)
 end)
 
--- On show.
-GrindGoals.mainFrame:SetScript("OnShow", function()
-    PlaySound(808)
-end)
+--                                         !!! Content of main frame !!!
 
--- Content of main frame
 GrindGoals.mainFrame.boxString = GrindGoals.mainFrame:CreateFontString(nil, "OVERLAY", "GameFontNormal")
 GrindGoals.mainFrame.boxString:SetPoint("TOPLEFT", GrindGoals.mainFrame, "TOPLEFT", 15, -35)
 GrindGoals.mainFrame.boxString:SetText("Item to grind:")
@@ -122,23 +138,28 @@ itemBox:SetAutoFocus(false)
 itemBox:SetText("")
 -- Tooltip
 itemBox:SetScript("OnEnter", function(self)  
-    local itemID = string.match(self:GetText(), "item:(%d+):")  -- If item link is in the box
     GameTooltip:SetOwner(self, "ANCHOR_RIGHT")
-    if itemID then
-        GameTooltip:SetItemByID(itemID) -- Show item tooltip
+    if GrindGoals.itemOfInterestID then
+        GameTooltip:SetItemByID(GrindGoals.itemOfInterestID) -- Show item tooltip
     else
         GameTooltip:SetText("Link item you want to farm", nil, nil, nil, nil, true) --Else show message
     end
-end)
-    
+end)    
 itemBox:SetScript("OnLeave", function(self)
     GameTooltip:Hide()        
 end)
 
+GrindGoals.mainFrame.itemCountString = GrindGoals.mainFrame:CreateFontString(nil, "OVERLAY", "GameFontNormal")
+GrindGoals.mainFrame.itemCountString:SetPoint("TOPLEFT", itemBox, "TOPLEFT", 0, -40)
+GrindGoals.mainFrame.itemCountString:SetText("Number in bags: " .. (countItemsInBags(GrindGoals.itemOfInterestID) or 0))
+
+-- Script for updating mainFrame when it is opened
+itemBox:SetScript("OnShow", function()
+    GrindGoals.mainFrame.itemCountString:SetText("Number in bags: " .. (countItemsInBags(GrindGoals.itemOfInterestID) or 0))
+end)
 
 
-
---    !!! EVENTS !!! 
+--                                               !!! EVENTS !!! 
 
 -- Create event listner frame
 local eventListenerFrame = CreateFrame("Frame", "GrindGoalsEventListenerFrame", UIParent)
@@ -151,20 +172,17 @@ local function eventHandler(self, event, ...)
         if (
                 frame and frame:GetParent() and frame:GetParent():GetName() 
                 and string.match(frame:GetParent():GetName(), "ContainerFrame") -- If frame is slot in bag
-            ) then
-            print("----------")    
+            ) then 
             local bagID = frame:GetParent():GetID()     -- Get the bag ID from the parent frame
             local slot = frame:GetID()                  -- Get the slot ID from the frame itself
             if bagID and slot then
-                print("Bag ID: " .. bagID .. ", Slot ID: " .. slot)
                 local itemID = C_Container.GetContainerItemID(bagID, slot)
                 if itemID then
-                    local _, itemlink = GetItemInfo(itemID)
+                    local _, itemlink = C_Item.GetItemInfo(itemID)
                     itemBox:SetText("")
                     itemBox:Insert(itemlink)  -- Insert item link into item box
                     StackSplitFrame:Hide() -- Hide WoW API frame for splitting stacks on Shift+LClick
-                else
-                    print("No item in this slot.")
+                    GrindGoals.itemOfInterestID = itemID -- Saving itemID to global
                 end
             end
         elseif frame and frame:GetParent() and frame:GetParent():GetName() then
@@ -172,7 +190,14 @@ local function eventHandler(self, event, ...)
             print("Frame Name: " .. frame:GetName())
         end
     end
+
+
+    if GrindGoals.mainFrame:IsShown() then
+        GrindGoals.mainFrame.itemCountString:SetText("Number in bags: " .. (countItemsInBags(GrindGoals.itemOfInterestID) or 0))
+    end
+
 end
+
 
 
 
