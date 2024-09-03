@@ -2,7 +2,7 @@
 ## Title: GrindGoals
 ## Notes: Addon which lets you set goal to grind and teels you when you've done it.
 ## Author: Tratatemium
-## Version: 0.0.2
+## Version: 0.0.3
 ## RequiredDeps:
 ## X-Curse-Project-ID: 999999
 ## SavedVariables:
@@ -11,4 +11,4 @@
 
 # Main Files
 main.lua
-
+selection.lua

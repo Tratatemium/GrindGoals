@@ -1,14 +1,34 @@
 -- This addon lets you set your goals for daily grind (number of items) and informs when its reached.
+-- This is the file for addon main frame and globals
 
 -- Global variable so other addons / scripts could adress main code
-GrindGoals = GrindGoals or {}
+GrindGoals = GrindGoals or {
+    frames={}, functions={},
+    topmostFrame = nil,             -- This global is for saving which frame displays on top
+    itemOfInterestID = nil
+}
+
+--[[ GrindGoals = {
+    frames = {
+        GrindGoals.frames.mainFrame
+    },
+    functions = {
+        GrindGoals.functions.countItemsInBags(itemID)
+        function GrindGoals.functions.setFrameOnTop(self)
+        GrindGoals.functions.updateMainframe()
+    },
+    GrindGoals.topmostFrame,
+    GrindGoals.itemOfInterestID
+    GrindGoals.itemIconTexture
+} ]]
+
+
 -- Create variable for information storage.
-GrindGoalsDB = GrindGoalsDB or {}
--- This global is for saving which frame displays on top
-GrindGoalsTopmostFrame = nil
+GrindGoalsDB = GrindGoalsDB or {itemToFarmID =nil}
+
 
 -- Function that checks how many of certan item player has in his bags
-local function countItemsInBags(itemID)
+function GrindGoals.functions.countItemsInBags(itemID)
     if itemID == nil then
         return nil
     end
@@ -24,44 +44,61 @@ local function countItemsInBags(itemID)
     return count
 end
 
+-- Function for setting frame as top frame
+function GrindGoals.functions.setFrameOnTop(self)
+    if GrindGoals.topmostFrame then
+        GrindGoals.topmostFrame:SetFrameLevel(1)  -- Reset the previous top frame's level
+    end
+    self:SetFrameStrata("HIGH")  -- Adjust this as needed
+    self:SetFrameLevel(100)  -- Push the current frame to the top
+    GrindGoals.topmostFrame = self  -- Set this frame as the new topmost
+end
+
+local function getFarmingItemLink()  -- Get item link from GrindGoalsDB.itemToFarmID
+    local itemToFarmLink =""
+    if GrindGoalsDB.itemToFarmID then
+        _, itemToFarmLink = C_Item.GetItemInfo(GrindGoalsDB.itemToFarmID)
+    else
+        itemToFarmLink = "[No item selected!]"
+    end
+    return itemToFarmLink
+end
+
 --Create main frame for addon
-GrindGoals.mainFrame = CreateFrame("Frame", "GrindGoalsMainFrame", UIParent, "BasicFrameTemplateWithInset")
-GrindGoals.mainFrame:SetSize(400, 250)
-GrindGoals.mainFrame:SetPoint("CENTER", UIParent, "CENTER", 0, 0)
-GrindGoals.mainFrame.TitleBg:SetHeight(30)
-GrindGoals.mainFrame.title = GrindGoals.mainFrame:CreateFontString(nil, "OVERLAY", "GameFontHighlight")
-GrindGoals.mainFrame.title:SetPoint("TOP", GrindGoals.mainFrame.TitleBg, "CENTER", 0, 10)
-GrindGoals.mainFrame.title:SetText("GrindGoals")
-GrindGoals.mainFrame:SetClipsChildren(true) -- Prevents rendering outside the frame
-GrindGoals.mainFrame:Hide() -- Frame is hidden by default
+GrindGoals.frames.mainFrame = CreateFrame("Frame", "GrindGoalsMainFrame", UIParent, "BasicFrameTemplateWithInset")
+GrindGoals.frames.mainFrame:SetSize(400, 250)
+GrindGoals.frames.mainFrame:SetPoint("CENTER", UIParent, "CENTER", 0, 0)
+GrindGoals.frames.mainFrame.TitleBg:SetHeight(30)
+GrindGoals.frames.mainFrame.title = GrindGoals.frames.mainFrame:CreateFontString(nil, "OVERLAY", "GameFontHighlight")
+GrindGoals.frames.mainFrame.title:SetPoint("TOP", GrindGoals.frames.mainFrame.TitleBg, "CENTER", 0, 10)
+GrindGoals.frames.mainFrame.title:SetText("GrindGoals")
+-- GrindGoals.frames.mainFrame:SetClipsChildren(true) -- Prevents rendering outside the frame
+GrindGoals.frames.mainFrame:Hide() -- Frame is hidden by default
 -- Making frame movable
-GrindGoals.mainFrame:EnableMouse(true)
-GrindGoals.mainFrame:SetMovable(true)
-GrindGoals.mainFrame:RegisterForDrag("LeftButton")
-GrindGoals.mainFrame:SetScript("OnDragStart", function(self)
+GrindGoals.frames.mainFrame:EnableMouse(true)
+GrindGoals.frames.mainFrame:SetMovable(true)
+GrindGoals.frames.mainFrame:RegisterForDrag("LeftButton")
+GrindGoals.frames.mainFrame:SetScript("OnDragStart", function(self)
     self:StartMoving()
 end)
-GrindGoals.mainFrame:SetScript("OnDragStop", function(self)
+GrindGoals.frames.mainFrame:SetScript("OnDragStop", function(self)
 	self:StopMovingOrSizing()
 end)
 
 -- Display frame on top if interracted with
-GrindGoals.mainFrame:SetScript("OnMouseDown", function(self)
-    if GrindGoalsTopmostFrame then
-        GrindGoalsTopmostFrame:SetFrameLevel(1)  -- Reset the previous top frame's level
+GrindGoals.frames.mainFrame:SetScript("OnMouseDown", function(self)
+    if not GrindGoals.frames.itemSelectionFrame:IsShown() then
+        GrindGoals.functions.setFrameOnTop(self)
     end
-    self:SetFrameStrata("HIGH")  -- Adjust this as needed
-    self:SetFrameLevel(100)  -- Push the current frame to the top
-    GrindGoalsTopmostFrame = self  -- Set this frame as the new topmost
 end)
 
 -- Adding frame to WoW special list to make it closeable by Esc
 table.insert(UISpecialFrames, "GrindGoalsMainFrame")
 
 -- Making frame resizable
-local resizeHandle = CreateFrame("Frame", "ResizeHandle", GrindGoals.mainFrame)
+local resizeHandle = CreateFrame("Frame", "ResizeHandle", GrindGoals.frames.mainFrame)
 resizeHandle:SetSize(16, 16)
-resizeHandle:SetPoint("BOTTOMRIGHT", GrindGoals.mainFrame, "BOTTOMRIGHT", -4, 4)
+resizeHandle:SetPoint("BOTTOMRIGHT", GrindGoals.frames.mainFrame, "BOTTOMRIGHT", -4, 4)
 local isResizing = false
 local function OnMouseDown(self, button)
     if button == "LeftButton" then
@@ -101,10 +138,10 @@ SLASH_GRINDGOALS1 = "/g"
 SLASH_GRINDGOALS2 = "/grind"
 SlashCmdList["GRINDGOALS"] = function(msg)
     if msg == "" then
-        if GrindGoals.mainFrame:IsShown() then
-            GrindGoals.mainFrame:Hide()
+        if GrindGoals.frames.mainFrame:IsShown() then
+            GrindGoals.frames.mainFrame:Hide()
         else
-            GrindGoals.mainFrame:Show()
+            GrindGoals.frames.mainFrame:Show()
         end
     elseif msg == "settings" then
         -- If the 'settings' argument is provided, open the settings
@@ -116,48 +153,80 @@ SlashCmdList["GRINDGOALS"] = function(msg)
 end
 
 
-GrindGoals.mainFrame:SetScript("OnHide", function() -- On hide.
-    PlaySound(808)
-end)
-GrindGoals.mainFrame:SetScript("OnShow", function() -- On show.
-    PlaySound(808)
-end)
 
 --                                         !!! Content of main frame !!!
 
-GrindGoals.mainFrame.boxString = GrindGoals.mainFrame:CreateFontString(nil, "OVERLAY", "GameFontNormal")
-GrindGoals.mainFrame.boxString:SetPoint("TOPLEFT", GrindGoals.mainFrame, "TOPLEFT", 15, -35)
-GrindGoals.mainFrame.boxString:SetText("Item to grind:")
-
--- Create box for item player wants to farm
-local itemBox = CreateFrame("EditBox", "ItemBox", GrindGoals.mainFrame, "InputBoxTemplate")
-itemBox:SetSize(300, 50)
-itemBox:SetPoint("TOPLEFT", GrindGoals.mainFrame.boxString, "TOPLEFT", 0, 0)
-itemBox:SetMaxLetters(200)
-itemBox:SetAutoFocus(false)
-itemBox:SetText("")
--- Tooltip
-itemBox:SetScript("OnEnter", function(self)  
-    GameTooltip:SetOwner(self, "ANCHOR_RIGHT")
-    if GrindGoals.itemOfInterestID then
-        GameTooltip:SetItemByID(GrindGoals.itemOfInterestID) -- Show item tooltip
+function GrindGoals.functions.updateMainframe()      -- This function updates information in mainFrame
+    GrindGoals.frames.mainFrame.itemLinkString:SetText("Item to grind: " .. getFarmingItemLink())
+    GrindGoals.frames.mainFrame.itemCountString:SetText("Number in bags: " .. (GrindGoals.functions.countItemsInBags(GrindGoalsDB.itemToFarmID) or 0))
+    if GrindGoalsDB.itemToFarmID then          -- Update item icon
+        local _, _, _, _, _, _, _, _, _, itemIcon = C_Item.GetItemInfo(GrindGoalsDB.itemToFarmID)
+        GrindGoals.itemIconTexture:SetTexture(itemIcon)
     else
-        GameTooltip:SetText("Link item you want to farm", nil, nil, nil, nil, true) --Else show message
+        GrindGoals.itemIconTexture:SetTexture("Interface\\Icons\\INV_Misc_QuestionMark")  -- Placeholder icon
     end
-end)    
-itemBox:SetScript("OnLeave", function(self)
+end
+
+GrindGoals.frames.mainFrame.itemLinkString = GrindGoals.frames.mainFrame:CreateFontString(nil, "OVERLAY", "GameFontNormal")
+GrindGoals.frames.mainFrame.itemLinkString:SetPoint("TOPLEFT", GrindGoals.frames.mainFrame, "TOPLEFT", 15, -35)
+
+local itemIconFrame = CreateFrame("Frame", "itemIconFrame", GrindGoals.frames.mainFrame, "BackdropTemplate")
+itemIconFrame:SetSize(64, 64)  -- Width, Height
+itemIconFrame:SetPoint("TOPLEFT", GrindGoals.frames.mainFrame.itemLinkString, "TOPLEFT", 0, -15)  -- Position on the screen
+itemIconFrame:SetBackdrop({
+    bgFile = "Interface\\DialogFrame\\UI-DialogBox-Background",
+    edgeFile = "Interface\\DialogFrame\\UI-DialogBox-Border",
+    tile = true, tileSize = 32, edgeSize = 32,
+    insets = { left = 8, right = 8, top = 8, bottom = 8 }
+})
+itemIconFrame:SetBackdropColor(0, 0, 0, 1)  -- Black background
+-- Create the item icon texture
+GrindGoals.itemIconTexture = itemIconFrame:CreateTexture(nil, "ARTWORK")
+GrindGoals.itemIconTexture:SetSize(40, 40)  -- Icon size
+GrindGoals.itemIconTexture:SetPoint("CENTER", itemIconFrame, "CENTER")
+itemIconFrame:SetScript("OnEnter", function(self)    --tooltip
+    GameTooltip:SetOwner(self, "ANCHOR_CURSOR_RIGHT")
+    if GrindGoalsDB.itemToFarmID then
+        GameTooltip:SetItemByID(GrindGoalsDB.itemToFarmID)
+    end
+end)
+itemIconFrame:SetScript("OnLeave", function(self)
     GameTooltip:Hide()        
 end)
 
-GrindGoals.mainFrame.itemCountString = GrindGoals.mainFrame:CreateFontString(nil, "OVERLAY", "GameFontNormal")
-GrindGoals.mainFrame.itemCountString:SetPoint("TOPLEFT", itemBox, "TOPLEFT", 0, -40)
-GrindGoals.mainFrame.itemCountString:SetText("Number in bags: " .. (countItemsInBags(GrindGoals.itemOfInterestID) or 0))
+GrindGoals.frames.mainFrame.itemCountString = GrindGoals.frames.mainFrame:CreateFontString(nil, "OVERLAY", "GameFontNormal")
+GrindGoals.frames.mainFrame.itemCountString:SetPoint("TOPLEFT", GrindGoals.frames.mainFrame.itemLinkString, "TOPLEFT", 0, -80)
 
--- Script for updating mainFrame when it is opened
-itemBox:SetScript("OnShow", function()
-    GrindGoals.mainFrame.itemCountString:SetText("Number in bags: " .. (countItemsInBags(GrindGoals.itemOfInterestID) or 0))
+
+-- Button to open item selection frame
+local selectItemButton = CreateFrame("Button", "selectItemButton", GrindGoals.frames.mainFrame, "UIPanelButtonTemplate")
+selectItemButton:SetPoint("BOTTOMRIGHT", GrindGoals.frames.mainFrame, "TOPRIGHT", -100, -100)
+selectItemButton:SetSize(125, 35)
+selectItemButton:SetText("Select Item")
+selectItemButton:SetNormalFontObject("GameFontNormalLarge")
+selectItemButton:SetHighlightFontObject("GameFontHighlightLarge")
+selectItemButton:SetScript("OnEnter", function(self)    --tooltip
+    GameTooltip:SetOwner(self, "ANCHOR_TOP")
+    GameTooltip:SetText("Open item selection window.", nil, nil, nil, nil, true)
+end)
+selectItemButton:SetScript("OnLeave", function(self)
+    GameTooltip:Hide()        
+end)
+selectItemButton:SetScript("OnClick", function() -- script on clicking button
+    GrindGoals.frames.itemSelectionFrame:Show()  
 end)
 
+
+--                                           !!! mainFrame scripts !!!
+
+GrindGoals.frames.mainFrame:SetScript("OnHide", function() -- On hide.
+    PlaySound(808)
+end)
+GrindGoals.frames.mainFrame:SetScript("OnShow", function() -- On show.
+    PlaySound(808)
+    GrindGoals.functions.updateMainframe()
+
+end)
 
 --                                               !!! EVENTS !!! 
 
@@ -166,34 +235,13 @@ local eventListenerFrame = CreateFrame("Frame", "GrindGoalsEventListenerFrame", 
 
 local function eventHandler(self, event, ...)
 
-    -- Handle linking item into item box
-    if  event == "GLOBAL_MOUSE_UP"  and IsShiftKeyDown() and GrindGoals.mainFrame:IsShown() and itemBox:HasFocus() then
-        local frame = GetMouseFoci()[1] -- Get frame under the mouse position
-        if (
-                frame and frame:GetParent() and frame:GetParent():GetName() 
-                and string.match(frame:GetParent():GetName(), "ContainerFrame") -- If frame is slot in bag
-            ) then 
-            local bagID = frame:GetParent():GetID()     -- Get the bag ID from the parent frame
-            local slot = frame:GetID()                  -- Get the slot ID from the frame itself
-            if bagID and slot then
-                local itemID = C_Container.GetContainerItemID(bagID, slot)
-                if itemID then
-                    local _, itemlink = C_Item.GetItemInfo(itemID)
-                    itemBox:SetText("")
-                    itemBox:Insert(itemlink)  -- Insert item link into item box
-                    StackSplitFrame:Hide() -- Hide WoW API frame for splitting stacks on Shift+LClick
-                    GrindGoals.itemOfInterestID = itemID -- Saving itemID to global
-                end
-            end
-        elseif frame and frame:GetParent() and frame:GetParent():GetName() then
-            print("----------")
-            print("Frame Name: " .. frame:GetName())
-        end
-    end
 
 
-    if GrindGoals.mainFrame:IsShown() then
-        GrindGoals.mainFrame.itemCountString:SetText("Number in bags: " .. (countItemsInBags(GrindGoals.itemOfInterestID) or 0))
+
+    if GrindGoals.frames.mainFrame:IsShown() then
+        GrindGoals.frames.mainFrame.itemCountString:SetText("Number in bags: " .. (
+            GrindGoals.functions.countItemsInBags(GrindGoalsDB.itemToFarmID) or 0)
+        )
     end
 
 end
@@ -201,9 +249,11 @@ end
 
 
 
-eventListenerFrame:RegisterEvent("GLOBAL_MOUSE_UP")
+
 eventListenerFrame:SetScript("OnEvent", eventHandler)
 
 
 
-GrindGoals.mainFrame:Show()
+
+
+GrindGoals.frames.mainFrame:Show()
