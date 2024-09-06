@@ -24,7 +24,11 @@ GrindGoals.frames.itemSelectionFrame:SetScript("OnShow", function() -- On show.
     GrindGoals.functions.setFrameOnTop(GrindGoals.frames.itemSelectionFrame)
 end)
 
---                                         !!! Content of item selection frame !!!
+--[[ 
+    **************************************************
+    * SECTION: selectionFrame contents
+    **************************************************
+--]]
 
 GrindGoals.frames.itemSelectionFrame.boxString = GrindGoals.frames.itemSelectionFrame:CreateFontString(nil, "OVERLAY", "GameFontNormal")
 GrindGoals.frames.itemSelectionFrame.boxString:SetPoint("TOPLEFT", GrindGoals.frames.itemSelectionFrame, "TOPLEFT", 15, -35)
@@ -84,7 +88,6 @@ lockInItemButton:SetScript("OnClick", function() -- script on clicking button
     GrindGoalsDB.itemToFarmID = GrindGoals.itemOfInterestID
     GrindGoals.frames.itemSelectionFrame:Hide()
     GrindGoals.functions.updateMainframe()
-    print("Check!")
 end)
 
 -- Script for updating item box when it is opened
@@ -95,9 +98,11 @@ itemBox:SetScript("OnShow", function()
 end)
 
 
-
-
---                                               !!! EVENTS !!! 
+--[[ 
+    **************************************************
+    * SECTION: selectionFrame events
+    **************************************************
+--]]
 
 -- Create event listner frame
 local eventListenerFrame = CreateFrame("Frame", "GrindGoalsEventListenerFrame", UIParent)
