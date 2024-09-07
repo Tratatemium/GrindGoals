@@ -126,7 +126,7 @@ end
 --]]
 
 GrindGoals.frames.mainFrame = CreateFrame("Frame", "GrindGoalsMainFrame", UIParent, "BasicFrameTemplateWithInset")
-GrindGoals.frames.mainFrame:SetSize(350, 250)
+GrindGoals.frames.mainFrame:SetSize(375, 250)
 GrindGoals.frames.mainFrame:SetPoint("CENTER", UIParent, "CENTER", 0, 0)
 GrindGoals.frames.mainFrame.TitleBg:SetHeight(30)
 GrindGoals.frames.mainFrame.title = GrindGoals.frames.mainFrame:CreateFontString(nil, "OVERLAY", "GameFontHighlight")
@@ -147,7 +147,11 @@ end)
 
 -- Display frame on top if interracted with
 GrindGoals.frames.mainFrame:SetScript("OnMouseDown", function(self)
-    if (not GrindGoals.frames.itemSelectionFrame:IsShown()) and (not GrindGoals.frames.wrongNumberFrame:IsShown()) then
+    if ((
+        not GrindGoals.frames.itemSelectionFrame:IsShown()) and 
+        (not GrindGoals.frames.wrongNumberFrame:IsShown()) and
+        (not GrindGoals.frames.wowhweadUrlFrame:IsShown())
+    ) then
         GrindGoals.functions.setFrameOnTop(self)
     end
 end)
@@ -250,6 +254,70 @@ GrindGoals.frames.selectItemButton:SetScript("OnClick", function() -- script on 
     GrindGoals.frames.itemSelectionFrame:Show()  
 end)
 
+-- *** Wowhead URL button ***
+
+GrindGoals.frames.wowhweadButton = CreateFrame("Button", "GrindGoals.frames.selectItemButton", GrindGoals.frames.mainFrame, "UIPanelButtonTemplate") -- Button to open wowhead url frame 
+GrindGoals.frames.wowhweadButton:SetPoint("CENTER", GrindGoals.frames.selectItemButton, "CENTER", 130, 0)
+GrindGoals.frames.wowhweadButton:SetSize(125, 35)
+GrindGoals.frames.wowhweadButton:SetText("Wowhead")
+GrindGoals.frames.wowhweadButton:SetNormalFontObject("GameFontNormalLarge")
+GrindGoals.frames.wowhweadButton:SetHighlightFontObject("GameFontHighlightLarge")
+GrindGoals.frames.wowhweadButton:SetScript("OnEnter", function(self)    --tooltip
+    GameTooltip:SetOwner(self, "ANCHOR_TOP")
+    GameTooltip:SetText("Get Wowhead link for selected item.", nil, nil, nil, nil, true)
+end)
+GrindGoals.frames.wowhweadButton:SetScript("OnLeave", function(self)
+    GameTooltip:Hide()        
+end)
+GrindGoals.frames.wowhweadButton:SetScript("OnClick", function() -- script on clicking button
+    PlaySound(808)
+    if GrindGoalsDB.itemToFarmID then
+        GrindGoals.frames.wowhweadUrlFrame:Show()
+    else
+        GrindGoals.frames.wrongNumberFrame:Show()   -- If item not selected show error frame
+    end
+
+end)
+
+GrindGoals.frames.wowhweadUrlFrame = CreateFrame("Frame", "GrindGoals.frames.wowhweadUrlFrame", GrindGoals.frames.mainFrame, "BackdropTemplate") -- Frame to show wowhead url
+GrindGoals.frames.wowhweadUrlFrame:SetSize(320, 130)
+GrindGoals.frames.wowhweadUrlFrame:SetPoint("CENTER", GrindGoals.frames.mainFrame, "CENTER", 0, 0) 
+GrindGoals.frames.wowhweadUrlFrame:SetBackdrop({
+    bgFile = "Interface\\Buttons\\WHITE8x8",
+    edgeFile = "Interface\\DialogFrame\\UI-DialogBox-Border",
+    tile = true, tileSize = 32, edgeSize = 32,
+    insets = { left = 8, right = 8, top = 8, bottom = 8 }
+})
+GrindGoals.frames.wowhweadUrlFrame:SetBackdropColor(0, 0, 0, 1) 
+GrindGoals.frames.wowhweadUrlFrame:Hide()
+GrindGoals.frames.wowhweadUrlFrame.wrongNumberString = GrindGoals.frames.wowhweadUrlFrame:CreateFontString(nil, "OVERLAY", "GameFontNormal")
+GrindGoals.frames.wowhweadUrlFrame.wrongNumberString:SetPoint("CENTER", GrindGoals.frames.wowhweadUrlFrame, "CENTER", 0, 35)
+GrindGoals.frames.wowhweadUrlFrame.wrongNumberString:SetText("Ctrl + C and paste this link to your browser!")
+
+local wowhweadUrlbox = CreateFrame("EditBox", "wowhweadUrlbox ", GrindGoals.frames.wowhweadUrlFrame, "InputBoxTemplate")
+wowhweadUrlbox:SetSize(250, 50)
+wowhweadUrlbox:SetPoint("CENTER", GrindGoals.frames.wowhweadUrlFrame, "CENTER", 0, 10)
+wowhweadUrlbox:SetMaxLetters(200)
+wowhweadUrlbox:SetAutoFocus(true)
+
+local wowhweadUrlFrameCloseButton = CreateFrame("Button", "wowhweadUrlFrameCloseButton", GrindGoals.frames.wowhweadUrlFrame, "UIPanelButtonTemplate") -- OK button
+wowhweadUrlFrameCloseButton:SetPoint("CENTER", GrindGoals.frames.wowhweadUrlFrame, "CENTER", 0, -25)
+wowhweadUrlFrameCloseButton:SetSize(125, 35)
+wowhweadUrlFrameCloseButton:SetText("Close")
+wowhweadUrlFrameCloseButton:SetNormalFontObject("GameFontNormalLarge")
+wowhweadUrlFrameCloseButton:SetHighlightFontObject("GameFontHighlightLarge")
+wowhweadUrlFrameCloseButton:SetScript("OnClick", function()
+    PlaySound(808)
+    GrindGoals.frames.wowhweadUrlFrame:Hide()
+end)
+
+GrindGoals.frames.wowhweadUrlFrame:SetScript("OnShow",function ()
+    GrindGoals.functions.setFrameOnTop(GrindGoals.frames.wowhweadUrlFrame)
+    wowhweadUrlbox :SetText("https://www.wowhead.com/item=" .. GrindGoalsDB.itemToFarmID)
+    wowhweadUrlbox:HighlightText()
+end)
+
+
 -- *** Number of items in bags ***
 
 -- NOTE : add bank and warband bank, make into checkboxes
@@ -320,7 +388,7 @@ GrindGoals.frames.wrongNumberFrame = CreateFrame("Frame", "GrindGoals.frames.wro
 GrindGoals.frames.wrongNumberFrame:SetSize(270, 110)
 GrindGoals.frames.wrongNumberFrame:SetPoint("CENTER", GrindGoals.frames.mainFrame, "CENTER", 0, 0) 
 GrindGoals.frames.wrongNumberFrame:SetBackdrop({
-    bgFile = "Interface\\DialogFrame\\UI-DialogBox-Background",
+    bgFile = "Interface\\Buttons\\WHITE8x8",
     edgeFile = "Interface\\DialogFrame\\UI-DialogBox-Border",
     tile = true, tileSize = 32, edgeSize = 32,
     insets = { left = 8, right = 8, top = 8, bottom = 8 }
@@ -328,7 +396,7 @@ GrindGoals.frames.wrongNumberFrame:SetBackdrop({
 GrindGoals.frames.wrongNumberFrame:SetBackdropColor(0, 0, 0, 1) 
 GrindGoals.frames.wrongNumberFrame.wrongNumberString = GrindGoals.frames.wrongNumberFrame:CreateFontString(nil, "OVERLAY", "GameFontNormal")
 GrindGoals.frames.wrongNumberFrame.wrongNumberString:SetPoint("CENTER", GrindGoals.frames.wrongNumberFrame, "CENTER", 0, 20)
-GrindGoals.frames.wrongNumberFrame.wrongNumberString:SetScript("OnShow",function ()
+GrindGoals.frames.wrongNumberFrame:SetScript("OnShow",function ()
     if GrindGoalsDB.itemToFarmID then
         GrindGoals.frames.wrongNumberFrame.wrongNumberString:SetText("You already have what you wish for!")
     else
