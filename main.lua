@@ -188,7 +188,7 @@ end
 -- *** updateMainframe() ***
 
 function GrindGoals.functions.updateMainframe()      -- This function updates information in mainFrame
-    GrindGoals.frames.mainFrame.itemLinkString:SetText("Item to grind: " .. getFarmingItemLink())
+    GrindGoals.frames.mainFrame.itemLinkString:SetText("Item to grind: " .. (getFarmingItemLink() or ""))
     GrindGoals.frames.mainFrame.itemCountString:SetText("Number in bags: " .. (GrindGoals.functions.countItemsInBags(GrindGoalsDB.itemToFarmID) or 0))
     GrindGoals.frames.itemNumberWantedBox:SetText(tostring(GrindGoalsDB.itemNumberWanted))
     if GrindGoalsDB.itemToFarmID then          -- Update item icon
@@ -203,6 +203,10 @@ end
 
 GrindGoals.frames.mainFrame.itemLinkString = GrindGoals.frames.mainFrame:CreateFontString(nil, "OVERLAY", "GameFontNormal")
 GrindGoals.frames.mainFrame.itemLinkString:SetPoint("TOPLEFT", GrindGoals.frames.mainFrame, "TOPLEFT", 20, -35)
+GrindGoals.frames.mainFrame.itemLinkString:SetPoint("BOTTOMRIGHT", GrindGoals.frames.mainFrame, "TOPRIGHT", -20, -65)
+--GrindGoals.frames.mainFrame.itemLinkString:SetJustifyH("LEFT")       -- Align text to the left
+GrindGoals.frames.mainFrame.itemLinkString:SetJustifyV("TOP")  -- Align text to the top
+GrindGoals.frames.mainFrame.itemLinkString:SetWordWrap(true)
 
 -- *** Item ICON ***
 
@@ -274,7 +278,7 @@ GrindGoals.frames.wowhweadButton:SetScript("OnClick", function() -- script on cl
     if GrindGoalsDB.itemToFarmID then
         GrindGoals.frames.wowhweadUrlFrame:Show()
     else
-        GrindGoals.frames.wrongNumberFrame:Show()   -- If item not selected show error frame
+        GrindGoals.frames.wrongNumberFrame:Show()   -- If item not selected show error frame5
     end
 
 end)
@@ -403,6 +407,7 @@ GrindGoals.frames.wrongNumberFrame:SetScript("OnShow",function ()
         GrindGoals.frames.wrongNumberFrame.wrongNumberString:SetText("You must choose the item first!")
     end
     GrindGoals.functions.setFrameOnTop(GrindGoals.frames.wrongNumberFrame)
+    PlaySound(850)
 end)
 
 local wrongNumberOkButton = CreateFrame("Button", "wrongNumberOkButton", GrindGoals.frames.wrongNumberFrame, "UIPanelButtonTemplate") -- OK button
@@ -464,9 +469,11 @@ local eventListenerFrame = CreateFrame("Frame", "GrindGoalsEventListenerFrame", 
 local function eventHandler(self, event, ...)
 
     if event == "ADDON_LOADED" and ... == "GrindGoals" then
-        setGrindState(true)
     end
 
+    if event == "GET_ITEM_INFO_RECEIVED" then   -- This evrnt fires when game cache recives item info from server t.ex. with C_Item.GetItemInfo
+        GrindGoals.functions.updateMainframe()   -- So we need to update mainFrame once more for it to show item info correctly
+    end
 
 
     if GrindGoals.frames.mainFrame:IsShown() then
@@ -477,15 +484,6 @@ local function eventHandler(self, event, ...)
 
 end
 
-
-
-
-
 eventListenerFrame:SetScript("OnEvent", eventHandler)
 eventListenerFrame:RegisterEvent("ADDON_LOADED")
-
-
-
-
-
-GrindGoals.frames.mainFrame:Show()
+eventListenerFrame:RegisterEvent("GET_ITEM_INFO_RECEIVED")
