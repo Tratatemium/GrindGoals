@@ -37,8 +37,9 @@ GrindGoals = GrindGoals or {
 
 -- Create variable for information storage.
 GrindGoalsDB = GrindGoalsDB or {
-    itemToFarmID = nil, 
+    itemToFarmID = nil,
     itemNumberWanted = 0,
+    itemNumberInBags = 0,
     isGrinding = false
 }
 --[[ GrindGoalsDB ={
@@ -55,16 +56,18 @@ GrindGoalsDB.itemToFarmID
 -- *** Count Items In Bags ***
 
 -- NOTE: rewrite for banks?
-function GrindGoals.functions.countItemsInBags(itemID) -- Function that checks how many of certan item player has in his bags
+function GrindGoals.functions.countItemsInBags(itemID, container) -- Function that checks how many of certan item player has in his bags
     if itemID == nil then
         return 0
     end
     local count = 0
-    for bag = 0, 5 do -- Loop through all bags
-        for slot = 1, C_Container.GetContainerNumSlots(bag) do -- Loop through all slots in the bag
-            local id = C_Container.GetContainerItemID(bag, slot)
-            if id == itemID then
-                count = count + C_Container.GetContainerItemInfo(bag, slot).stackCount
+    if container == "Bags" then
+        for bag = BACKPACK_CONTAINER, BACKPACK_CONTAINER + NUM_BAG_SLOTS + NUM_REAGENTBAG_SLOTS do -- Loop through all bags
+            for slot = 1, C_Container.GetContainerNumSlots(bag) do -- Loop through all slots in the bag          
+                local id = C_Container.GetContainerItemID(bag, slot) 
+                if id == itemID then
+                    count = count + C_Container.GetContainerItemInfo(bag, slot).stackCount
+                end
             end
         end
     end
@@ -107,7 +110,7 @@ local function setGrindState(printMsg)                          -- Function that
         if printMsg == true then    -- Message to chat on current state
             print(
             "|cFF00FF00[GrindGoals]|r:  Grinding  " .. getFarmingItemLink() .. " !   " ..
-            GrindGoals.functions.countItemsInBags(GrindGoalsDB.itemToFarmID) .. "/" .. GrindGoalsDB.itemNumberWanted
+            GrindGoals.functions.countItemsInBags(GrindGoalsDB.itemToFarmID, "Bags") .. "/" .. GrindGoalsDB.itemNumberWanted
             )   
         end
         GrindGoals.frames.selectItemButton:Disable()
@@ -126,7 +129,7 @@ end
 --]]
 
 GrindGoals.frames.mainFrame = CreateFrame("Frame", "GrindGoalsMainFrame", UIParent, "BasicFrameTemplateWithInset")
-GrindGoals.frames.mainFrame:SetSize(375, 250)
+GrindGoals.frames.mainFrame:SetSize(375, 300)
 GrindGoals.frames.mainFrame:SetPoint("CENTER", UIParent, "CENTER", 0, 0)
 GrindGoals.frames.mainFrame.TitleBg:SetHeight(30)
 GrindGoals.frames.mainFrame.title = GrindGoals.frames.mainFrame:CreateFontString(nil, "OVERLAY", "GameFontHighlight")
@@ -189,7 +192,9 @@ end
 
 function GrindGoals.functions.updateMainframe()      -- This function updates information in mainFrame
     GrindGoals.frames.mainFrame.itemLinkString:SetText("Item to grind: " .. (getFarmingItemLink() or ""))
-    GrindGoals.frames.mainFrame.itemCountString:SetText("Number in bags: " .. (GrindGoals.functions.countItemsInBags(GrindGoalsDB.itemToFarmID) or 0))
+    GrindGoals.frames.mainFrame.itemCountString:SetText("Number in bags: " .. (GrindGoals.functions.countItemsInBags(GrindGoalsDB.itemToFarmID, "Bags") or 0))
+    GrindGoals.frames.mainFrame.characterBankCheckbox.Text:SetText("Number in character bank: ")
+    GrindGoals.frames.mainFrame.warbandBankCheckbox.Text:SetText("Number in warband bank: ")
     GrindGoals.frames.itemNumberWantedBox:SetText(tostring(GrindGoalsDB.itemNumberWanted))
     if GrindGoalsDB.itemToFarmID then          -- Update item icon
         local _, _, _, _, _, _, _, _, _, itemIcon = C_Item.GetItemInfo(GrindGoalsDB.itemToFarmID)
@@ -328,10 +333,38 @@ end)
 GrindGoals.frames.mainFrame.itemCountString = GrindGoals.frames.mainFrame:CreateFontString(nil, "OVERLAY", "GameFontNormal")
 GrindGoals.frames.mainFrame.itemCountString:SetPoint("TOPLEFT", itemIconFrame, "BOTTOMLEFT", 0, -11)
 
+
+GrindGoals.frames.mainFrame.characterBankCheckbox = CreateFrame("CheckButton", "characterBankCheckbox", GrindGoals.frames.mainFrame, "UICheckButtonTemplate")
+GrindGoals.frames.mainFrame.characterBankCheckbox:SetPoint("TOPLEFT", GrindGoals.frames.mainFrame.itemCountString, "TOPLEFT", 0, -15)
+
+GrindGoals.frames.mainFrame.warbandBankCheckbox = CreateFrame("CheckButton", "characterBankCheckbox", GrindGoals.frames.mainFrame, "UICheckButtonTemplate")
+GrindGoals.frames.mainFrame.warbandBankCheckbox:SetPoint("TOPLEFT", GrindGoals.frames.mainFrame.characterBankCheckbox, "TOPLEFT", 0, -25)
+
+--[[ -- Creating database settings entry if we dont have that one
+if My_CashAndSlashDB.settingsKeys[key] == nil then
+    My_CashAndSlashDB.settingsKeys[key] = true
+end
+-- Displaying checkbox status according to database
+checkbox:SetChecked(My_CashAndSlashDB.settingsKeys[key])
+
+checkbox:SetScript("OnEnter", function(self)    
+    GameTooltip:SetOwner(self, "ANCHOR_RIGHT")
+    GameTooltip:SetText(checkboxTooltip, nil, nil, nil, nil, true)
+end)
+
+checkbox:SetScript("OnLeave", function(self)
+    GameTooltip:Hide()        
+end)
+
+checkbox:SetScript("OnClick", function(self)
+    PlaySound(808)
+    My_CashAndSlashDB.settingsKeys[key] = self:GetChecked()
+ ]]
+
 -- *** How much do you want to farm line and editBox ***
 
 GrindGoals.frames.mainFrame.itemNumberWantedString = GrindGoals.frames.mainFrame:CreateFontString(nil, "OVERLAY", "GameFontNormal")
-GrindGoals.frames.mainFrame.itemNumberWantedString:SetPoint("TOPLEFT", GrindGoals.frames.mainFrame.itemCountString, "TOPLEFT", 0, -20)
+GrindGoals.frames.mainFrame.itemNumberWantedString:SetPoint("TOPLEFT", GrindGoals.frames.mainFrame.warbandBankCheckbox, "TOPLEFT", 0, -35)
 GrindGoals.frames.mainFrame.itemNumberWantedString:SetText("How many do you need:")
 
 GrindGoals.frames.itemNumberWantedBox = CreateFrame("EditBox", "NumberOfKillsToAnnounceBox", GrindGoals.frames.mainFrame, "InputBoxTemplate") -- Edit box to put the number of items to farm in
@@ -427,8 +460,9 @@ GrindGoals.frames.wrongNumberFrame:Hide()
 -- TODO : Sounds!
 GrindGoals.frames.grindButton:SetScript("OnClick", function() -- script on clicking START button
     GrindGoalsDB.itemNumberWanted = tonumber(GrindGoals.frames.itemNumberWantedBox:GetText()) or 0 -- Global for number of items player want (goal)
-    if GrindGoalsDB.itemToFarmID and (GrindGoalsDB.itemNumberWanted > GrindGoals.functions.countItemsInBags(GrindGoalsDB.itemToFarmID)) then -- Check if player already has that number and item selected
+    if GrindGoalsDB.itemToFarmID and (GrindGoalsDB.itemNumberWanted > GrindGoals.functions.countItemsInBags(GrindGoalsDB.itemToFarmID, "Bags")) then -- Check if player already has that number and item selected
         GrindGoalsDB.isGrinding = true
+        GrindGoalsDB.itemNumberInBags = GrindGoals.functions.countItemsInBags(GrindGoalsDB.itemToFarmID, "Bags")
         setGrindState(true)
     else
         GrindGoals.frames.wrongNumberFrame:Show()
@@ -438,8 +472,26 @@ end)
 GrindGoals.frames.stopGrindButton:SetScript("OnClick", function() -- script on clicking STOP button
     print("|cFF00FF00[GrindGoals]|r:  Stopped grinding!")
     GrindGoalsDB.isGrinding = false
+    GrindGoalsDB.itemNumberInBags = 0
     setGrindState()
 end)
+
+--[[ 
+    **************************************************
+    * SECTION: Announcment messages in the top of the screen
+    **************************************************
+--]]
+
+GrindGoals.frames.msgFrame = CreateFrame("FRAME", "GrindGoals.frames.msgFrame", UIParent)
+GrindGoals.frames.msgFrame:SetWidth(1)
+GrindGoals.frames.msgFrame:SetHeight(1)
+GrindGoals.frames.msgFrame:SetPoint("CENTER", UIParent, "TOP", 0, -200)
+GrindGoals.frames.msgFrame:SetFrameStrata("TOOLTIP")
+GrindGoals.frames.msgFrame.text = GrindGoals.frames.msgFrame:CreateFontString(nil, "OVERLAY", "GameFontHighlight")
+GrindGoals.frames.msgFrame.text:SetFont("fonts/2002.ttf", 18, "OUTLINE")  -- Replace with your Gothic font path and desired size
+GrindGoals.frames.msgFrame.text:SetTextColor(1.0, 0.84, 0.0) 
+GrindGoals.frames.msgFrame.text:SetPoint("CENTER")
+GrindGoals.frames.msgFrame:Hide()
 
 
 --[[ 
@@ -475,10 +527,33 @@ local function eventHandler(self, event, ...)
         GrindGoals.functions.updateMainframe()   -- So we need to update mainFrame once more for it to show item info correctly
     end
 
+    if event == "BAG_UPDATE" and GrindGoalsDB.isGrinding then
+        GrindGoalsDB.itemNumberInBags = GrindGoals.functions.countItemsInBags(GrindGoalsDB.itemToFarmID, "Bags")
+        if GrindGoalsDB.itemNumberInBags >= GrindGoalsDB.itemNumberWanted then
+            print("|cFF00FF00[GrindGoals]|r:  Grind goal is reached!")
+
+            local msgText = (
+                "Congratulations, " .. UnitName("player") .. 
+                "! \nYou've just achieved your goal: " .. (getFarmingItemLink() or "") ..  "  " ..
+                GrindGoalsDB.itemNumberInBags .. "/" .. GrindGoalsDB.itemNumberWanted
+            )
+            PlaySound(SOUNDKIT.IG_QUEST_LIST_COMPLETE)
+            GrindGoals.frames.msgFrame.text:SetText(msgText)
+            GrindGoals.frames.msgFrame:Show()  -- Show the message
+            C_Timer.After(5, function()  -- Schedule the frame to hide after `duration` seconds
+                GrindGoals.frames.msgFrame:Hide()
+            end)
+
+            GrindGoalsDB.isGrinding = false
+            GrindGoalsDB.itemNumberInBags = 0
+            setGrindState()
+        end
+    end
+
 
     if GrindGoals.frames.mainFrame:IsShown() then
         GrindGoals.frames.mainFrame.itemCountString:SetText("Number in bags: " .. (
-            GrindGoals.functions.countItemsInBags(GrindGoalsDB.itemToFarmID) or 0)
+            GrindGoals.functions.countItemsInBags(GrindGoalsDB.itemToFarmID, "Bags") or 0)
         )
     end
 
@@ -487,3 +562,5 @@ end
 eventListenerFrame:SetScript("OnEvent", eventHandler)
 eventListenerFrame:RegisterEvent("ADDON_LOADED")
 eventListenerFrame:RegisterEvent("GET_ITEM_INFO_RECEIVED")
+eventListenerFrame:RegisterEvent("CHAT_MSG_LOOT")
+eventListenerFrame:RegisterEvent("BAG_UPDATE")
