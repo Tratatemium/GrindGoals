@@ -232,7 +232,7 @@ table.insert(UISpecialFrames, "GrindGoalsMainFrame")
 
 
 -- Making addon recognize slash commands.
-SLASH_GRINDGOALS1 = "/g"
+SLASH_GRINDGOALS1 = "/gg"
 SLASH_GRINDGOALS2 = "/grind"
 SlashCmdList["GRINDGOALS"] = function(msg)
     if msg == "" then
@@ -557,6 +557,68 @@ GrindGoals.frames.stopGrindButton:SetScript("OnClick", function() -- script on c
     setGrindState()
 end)
 
+
+-- *** Tab buttons ***
+
+local tabs = {"Main", "Settings"}
+
+-- Function that creates tabs at the bottom of the mainFrame
+--- @param tabs table Table that contains tab names
+--- @return table tabButtons Table containing button fames
+local function createTabs(tabs)
+
+    local tabButtons = {}
+
+    for i, tab in ipairs(tabs) do
+
+        tabButtons[i] = CreateFrame("Button", "TabButtonID" .. i, GrindGoals.frames.mainFrame)
+        tabButtons[i]:SetID(i)
+
+        tabButtons[i]:SetSize(100, 30)
+        tabButtons[i]:SetPoint("TOPLEFT", GrindGoals.frames.mainFrame, "BOTTOMLEFT", 10 + (i - 1) * 100, 0)
+
+        tabButtons[i].normalTexture = tabButtons[i]:CreateTexture(nil, "BACKGROUND")
+        tabButtons[i].normalTexture:SetPoint("TOPLEFT", tabButtons[i], "TOPLEFT", -5, 0)
+        tabButtons[i].normalTexture:SetPoint("BOTTOMRIGHT", tabButtons[i], "BOTTOMRIGHT", 5, -5)
+        tabButtons[i].normalTexture:SetTexture("Interface\\PaperDollInfoFrame\\UI-Character-InactiveTab")
+        tabButtons[i]:SetNormalTexture(tabButtons[i].normalTexture)
+
+        tabButtons[i].disabledTexture = tabButtons[i]:CreateTexture(nil, "BACKGROUND")
+        tabButtons[i].disabledTexture:SetPoint("TOPLEFT", tabButtons[i], "TOPLEFT", -5, 0)
+        tabButtons[i].disabledTexture:SetPoint("BOTTOMRIGHT", tabButtons[i], "BOTTOMRIGHT", 5, -35)
+        tabButtons[i].disabledTexture:SetTexture("Interface\\PaperDollInfoFrame\\UI-Character-ActiveTab")
+        tabButtons[i]:SetDisabledTexture(tabButtons[i].disabledTexture)
+
+        tabButtons[i].highlightTexture = tabButtons[i]:CreateTexture(nil, "HIGHLIGHT")
+        tabButtons[i].highlightTexture:SetTexture("Interface\\PaperDollInfoFrame\\UI-Character-InactiveTab")
+        tabButtons[i].highlightTexture:SetPoint("TOPLEFT", tabButtons[i], "TOPLEFT", -5, 0)
+        tabButtons[i].highlightTexture:SetPoint("BOTTOMRIGHT", tabButtons[i], "BOTTOMRIGHT", 5, -5)
+        tabButtons[i].highlightTexture:SetBlendMode("ADD")
+
+        -- Set the text for the button
+        tabButtons[i].text = tabButtons[i]:CreateFontString(nil, "OVERLAY", "GameFontNormal")
+        tabButtons[i].text:SetPoint("CENTER", tabButtons[i], "CENTER", 0, 0)
+        tabButtons[i].text:SetText(tab)
+
+    end
+    
+    return tabButtons
+end
+
+GrindGoals.frames.tabButtons = createTabs(tabs)
+
+function GrindGoals.functions.updateTabs(self)
+    for _, tabButton in pairs(GrindGoals.frames.tabButtons) do
+        if tabButton == self then
+            tabButton:Disable()
+            GrindGoals.activeTab = tabButton:GetID()
+        else 
+            tabButton:Enable()
+        end
+    end
+end
+
+
 --[[ 
     **************************************************
     * SECTION: Announcment messages in the top of the screen
@@ -588,6 +650,26 @@ GrindGoals.frames.mainFrame:SetScript("OnShow", function() -- On show.
     PlaySound(808)
     GrindGoals.functions.updateMainframe()
     setGrindState()
+
+    GrindGoals.functions.updateTabs(GrindGoals.frames.tabButtons[1])
+
+    if GrindGoals.frames.settingsFrame:IsShown() then
+        GrindGoals.frames.settingsFrame:Hide()
+        GrindGoals.functions.setFrameOnTop(GrindGoals.frames.mainFrame)
+    end
+    for _, tabButton in pairs(GrindGoals.frames.tabButtons) do
+        tabButton:SetScript("OnClick", function (self)
+            PlaySound(808)
+            GrindGoals.functions.updateTabs(self)
+            if GrindGoals.activeTab == 2 then
+                GrindGoals.frames.settingsFrame:Show()
+                GrindGoals.functions.setFrameOnTop(GrindGoals.frames.settingsFrame)
+            else
+                GrindGoals.frames.settingsFrame:Hide()
+                GrindGoals.functions.setFrameOnTop(GrindGoals.frames.mainFrame)
+            end
+        end)
+    end
 end)
 
 --[[ 
