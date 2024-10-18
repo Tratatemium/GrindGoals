@@ -166,7 +166,8 @@ GrindGoals.frames.wrongItemFrame:SetBackdropColor(0, 0, 0, 1)
 GrindGoals.frames.wrongItemFrame.errorString = GrindGoals.frames.wrongItemFrame:CreateFontString(nil, "OVERLAY", "GameFontNormal")
 GrindGoals.frames.wrongItemFrame.errorString:SetPoint("CENTER", GrindGoals.frames.wrongItemFrame, "CENTER", 0, 20)
 GrindGoals.frames.wrongItemFrame:SetScript("OnShow", function (self)
-    GrindGoals.functions.setFrameOnTop(self)
+    GrindGoals.frames.itemSelectionFrame:SetFrameLevel(90)
+    GrindGoals.frames.wrongItemFrame:SetFrameLevel(100)
     PlaySound(850)
 end)
 
@@ -179,6 +180,7 @@ wrongItemOkButton:SetHighlightFontObject("GameFontHighlightLarge")
 wrongItemOkButton:SetScript("OnClick", function()
     PlaySound(808)
     GrindGoals.frames.wrongItemFrame:Hide()
+    GrindGoals.frames.itemSelectionFrame:SetFrameLevel(100)
     for _, itemCheckbox in pairs(itemCheckboxes) do
         if itemCheckbox.checkboxName:GetChecked() then  -- if error is wrong input set cursor and highlight wrong text
             itemCheckbox.editboxName:HighlightText()

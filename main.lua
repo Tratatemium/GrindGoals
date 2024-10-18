@@ -45,6 +45,11 @@ GrindGoalsDB = GrindGoalsDB or {
     settings = {
         considerCharacterBank = false,
         considerWarbandBank = false,
+        announceEveryNItem = true,
+        numItemsToAnnounce = 100,
+        announceInChat = true,
+        announceOnScreen = false,
+        playSound = false
     }
 }
 
@@ -52,10 +57,7 @@ GrindGoalsAccountDB = GrindGoalsAccountDB or {
     warbandBankContents = {}
 }
 
---[[ GrindGoalsDB ={
-GrindGoalsDB.itemNumberWanted,
-GrindGoalsDB.itemToFarmID
-} ]]
+
 
 --[[ 
     **************************************************
@@ -122,6 +124,8 @@ function GrindGoals.functions.getBankContents(bankType)
     return bankContents
 end
 
+-- ***  Count Items (total) ***
+
 --- Function that checks how many of certan item player has in his bags
 --- @param itemID number
 --- @return number count returns 0 if itemID is nil
@@ -144,7 +148,8 @@ end
 
 -- *** Set Frame On Top ***
 
-function GrindGoals.functions.setFrameOnTop(self) -- Function for setting frame as top frame
+-- Function for setting frame as top frame
+function GrindGoals.functions.setFrameOnTop(self) 
     if GrindGoals.topmostFrame then
         GrindGoals.topmostFrame:SetFrameLevel(1)  -- Reset the previous top frame's level
     end
@@ -155,7 +160,9 @@ end
 
 --- *** Get Farming Item Link ***
 
-local function getFarmingItemLink()  -- Get item link from GrindGoalsDB.itemToFarmID
+-- Function that retirns item link from GrindGoalsDB.itemToFarmID
+--- @return string itemToFarmLink returns "[No item selected!]" if GrindGoalsDB.itemToFarmID is nil
+function GrindGoals.functions.getFarmingItemLink()  
     local itemToFarmLink =""
     if GrindGoalsDB.itemToFarmID then
         _, itemToFarmLink = C_Item.GetItemInfo(GrindGoalsDB.itemToFarmID)
@@ -167,7 +174,8 @@ end
 
 -- *** Set Grind State ***
 
-local function setGrindState(printMsg)                          -- Function that sets grind state depending on GrindGoalsDB.isGrinding variable
+-- Function that sets grind state depending on GrindGoalsDB.isGrinding variable
+local function setGrindState(printMsg)                          
     if GrindGoalsDB.isGrinding == false then
         GrindGoals.frames.selectItemButton:Enable() 
         GrindGoals.frames.grindButton:Enable()
@@ -176,10 +184,7 @@ local function setGrindState(printMsg)                          -- Function that
         GrindGoals.frames.glow:Hide()
     else
         if printMsg == true then    -- Message to chat on current state
-            print(
-            "|cFF00FF00[GrindGoals]|r:  Grinding  " .. getFarmingItemLink() .. " !   " ..
-            GrindGoals.functions.countItemsPayerHas(GrindGoalsDB.itemToFarmID) .. "/" .. GrindGoalsDB.itemNumberWanted
-            )   
+            print(GrindGoals.functions.nowGrindingmessageString())   
         end
         GrindGoals.frames.selectItemButton:Disable()
         GrindGoals.frames.grindButton:Disable()
@@ -188,6 +193,18 @@ local function setGrindState(printMsg)                          -- Function that
         GrindGoals.frames.glow:Show()
     end
     
+end
+
+-- *** Announcement string ***
+
+--- Function that forms the announcement string with info on current state of farming
+--- @return string resultString
+function GrindGoals.functions.nowGrindingmessageString()
+    local resultString = (
+        "|cFF00FF00[GrindGoals]|r:  Grinding " .. GrindGoals.functions.getFarmingItemLink() .. " !   " ..
+        GrindGoals.functions.countItemsPayerHas(GrindGoalsDB.itemToFarmID) .. "/" .. GrindGoalsDB.itemNumberWanted
+    )
+    return resultString
 end
 
 --[[ 
@@ -259,7 +276,7 @@ end
 -- *** updateMainframe() ***
 
 function GrindGoals.functions.updateMainframe()      -- This function updates information in mainFrame
-    GrindGoals.frames.mainFrame.itemLinkString:SetText("Item to grind: " .. (getFarmingItemLink() or ""))
+    GrindGoals.frames.mainFrame.itemLinkString:SetText("Item to grind: " .. (GrindGoals.functions.getFarmingItemLink() or ""))
     GrindGoals.frames.mainFrame.itemInBagsCountString:SetText("Number in bags: |cffffffff" .. (GrindGoals.functions.countItemsInBags(GrindGoalsDB.itemToFarmID) or 0) .. "|r")
     GrindGoals.frames.mainFrame.characterBankCheckbox:SetChecked(GrindGoalsDB.settings.considerCharacterBank)
     GrindGoals.frames.mainFrame.characterBankCheckbox.Text:SetText("In character bank: |cffffffff" .. (GrindGoalsDB.characterBankContents[GrindGoalsDB.itemToFarmID] or 0) .. "|r")
@@ -545,16 +562,17 @@ GrindGoals.frames.grindButton:SetScript("OnClick", function() -- script on click
         GrindGoalsDB.isGrinding = true
         GrindGoalsDB.itemNumberPlayerHas = GrindGoals.functions.countItemsPayerHas(GrindGoalsDB.itemToFarmID)
         setGrindState(true)
+        PlaySound(618) 
     else
         GrindGoals.frames.wrongNumberFrame:Show()
     end
-    
 end)
 GrindGoals.frames.stopGrindButton:SetScript("OnClick", function() -- script on clicking STOP button
     print("|cFF00FF00[GrindGoals]|r:  Stopped grinding!")
     GrindGoalsDB.isGrinding = false
     GrindGoalsDB.itemNumberPlayerHas = 0
     setGrindState()
+    PlaySound(846)
 end)
 
 
@@ -631,7 +649,7 @@ GrindGoals.frames.msgFrame:SetHeight(1)
 GrindGoals.frames.msgFrame:SetPoint("CENTER", UIParent, "TOP", 0, -200)
 GrindGoals.frames.msgFrame:SetFrameStrata("TOOLTIP")
 GrindGoals.frames.msgFrame.text = GrindGoals.frames.msgFrame:CreateFontString(nil, "OVERLAY", "GameFontHighlight")
-GrindGoals.frames.msgFrame.text:SetFont("fonts/2002.ttf", 18, "OUTLINE")  -- Replace with your Gothic font path and desired size
+GrindGoals.frames.msgFrame.text:SetFont("fonts/2002.ttf", 18, "OUTLINE")
 GrindGoals.frames.msgFrame.text:SetTextColor(1.0, 0.84, 0.0) 
 GrindGoals.frames.msgFrame.text:SetPoint("CENTER")
 GrindGoals.frames.msgFrame:Hide()
@@ -684,33 +702,66 @@ local eventListenerFrame = CreateFrame("Frame", "GrindGoalsEventListenerFrame", 
 local function eventHandler(self, event, ...)
 
     if event == "ADDON_LOADED" and ... == "GrindGoals" then
+        print("|cFF00FF00[GrindGoals]|r:  GrindGoals is successfully loaded. Type |cFF00FF00/gg|r to open addon window.")
+        if GrindGoalsDB.isGrinding then
+            print(GrindGoals.functions.nowGrindingmessageString())
+        end
     end
 
     if event == "GET_ITEM_INFO_RECEIVED" then   -- This evrnt fires when game cache recives item info from server t.ex. with C_Item.GetItemInfo
         GrindGoals.functions.updateMainframe()   -- So we need to update mainFrame once more for it to show item info correctly
     end
 
-    if event == "BAG_UPDATE" and GrindGoalsDB.isGrinding then
-        GrindGoalsDB.itemNumberPlayerHas = GrindGoals.functions.countItemsPayerHas(GrindGoalsDB.itemToFarmID)
-        if GrindGoalsDB.itemNumberPlayerHas >= GrindGoalsDB.itemNumberWanted then
-            print("|cFF00FF00[GrindGoals]|r:  Grind goal is reached!")
+    -- *** Announcments on getting items ***
 
-            local msgText = (
-                "Congratulations, " .. UnitName("player") .. 
-                "! \nYou've just achieved your goal: " .. (getFarmingItemLink() or "") ..  "  " ..
-                GrindGoalsDB.itemNumberPlayerHas .. "/" .. GrindGoalsDB.itemNumberWanted
-            )
-            PlaySound(SOUNDKIT.IG_QUEST_LIST_COMPLETE)
-            GrindGoals.frames.msgFrame.text:SetText(msgText)
-            GrindGoals.frames.msgFrame:Show()  -- Show the message
-            C_Timer.After(5, function()  -- Schedule the frame to hide after `duration` seconds
-                GrindGoals.frames.msgFrame:Hide()
-            end)
+    if event == "BAG_UPDATE" and GrindGoalsDB.isGrinding then --This event fites when bags are updated, t.ex. player acquires an item
+        local itemNumberAfterUpdate = GrindGoals.functions.countItemsPayerHas(GrindGoalsDB.itemToFarmID)
+        if itemNumberAfterUpdate > GrindGoalsDB.itemNumberPlayerHas then
+            GrindGoalsDB.itemNumberPlayerHas = itemNumberAfterUpdate
 
-            GrindGoalsDB.isGrinding = false
-            GrindGoalsDB.itemNumberPlayerHas = 0
-            setGrindState()
-        end
+            if GrindGoalsDB.itemNumberPlayerHas >= GrindGoalsDB.itemNumberWanted then -- If the goal is reached
+                print("|cFF00FF00[GrindGoals]|r:  Grind goal is reached!")
+
+                local msgText = (
+                    "|cFF00FF00[GrindGoals]|r:  Congratulations, " .. UnitName("player") .. 
+                    "! \nYou've just achieved your goal: " .. (GrindGoals.functions.getFarmingItemLink() or "") ..  "  " ..
+                    GrindGoalsDB.itemNumberPlayerHas .. "/" .. GrindGoalsDB.itemNumberWanted
+                )
+                PlaySound(SOUNDKIT.IG_QUEST_LIST_COMPLETE)
+                GrindGoals.frames.msgFrame.text:SetText(msgText)
+                GrindGoals.frames.msgFrame:Show()  -- Show the message
+                C_Timer.After(5, function()  -- Schedule the frame to hide after `duration` seconds
+                    GrindGoals.frames.msgFrame:Hide()
+                end)
+
+                GrindGoalsDB.isGrinding = false
+                GrindGoalsDB.itemNumberPlayerHas = 0
+                setGrindState()
+
+            elseif (  -- Announce every N item acquisiton if this setting is checked
+                GrindGoalsDB.settings.announceEveryNItem and
+                GrindGoalsDB.settings.numItemsToAnnounce ~= 0 and
+                GrindGoalsDB.itemNumberPlayerHas % GrindGoalsDB.settings.numItemsToAnnounce == 0
+            ) then
+
+                if GrindGoalsDB.settings.announceInChat then
+                    print(GrindGoals.functions.nowGrindingmessageString())                    
+                end
+
+                if GrindGoalsDB.settings.announceOnScreen then
+                    local msgText = (GrindGoals.functions.nowGrindingmessageString())
+                    GrindGoals.frames.msgFrame.text:SetText(msgText)
+                    GrindGoals.frames.msgFrame:Show()  -- Show the message
+                    C_Timer.After(5, function()  -- Schedule the frame to hide after `duration` seconds
+                        GrindGoals.frames.msgFrame:Hide()
+                    end)
+                end
+
+                if GrindGoalsDB.settings.playSound then
+                    PlaySound(8459)
+                end
+            end
+        end    
     end
 
     if event == "BANKFRAME_OPENED" then

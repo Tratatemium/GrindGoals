@@ -2,7 +2,7 @@
 ## Title: GrindGoals
 ## Notes: Addon which lets you set goal to grind and teels you when you've done it.
 ## Author: Tratatemium
-## Version: 0.3.0
+## Version: 0.3.1
 ## RequiredDeps:
 ## X-Curse-Project-ID: 999999
 ## SavedVariables: GrindGoalsAccountDB
