@@ -20,23 +20,9 @@ GrindGoals = GrindGoals or {
     itemOfInterestID = nil
 }
 
---[[ GrindGoals = {
-    frames = {
-        GrindGoals.frames.mainFrame
-    },
-    functions = {
-        GrindGoals.functions.countItemsInBags(itemID)
-        function GrindGoals.functions.setFrameOnTop(self)
-        GrindGoals.functions.updateMainframe()
-    },
-    GrindGoals.topmostFrame,
-    GrindGoals.itemOfInterestID
-    GrindGoals.itemIconTexture,
-} ]]
 
-
--- Create variable for information storage.
-GrindGoalsDB = GrindGoalsDB or {
+-- Defaul form of variable for information storage.
+local defaultGrindGoalsDB = {
     itemToFarmID = nil,
     itemNumberWanted = 0,
     itemNumberInBags = 0,
@@ -53,10 +39,12 @@ GrindGoalsDB = GrindGoalsDB or {
     }
 }
 
+-- Variable for information storage (make default if WoW client don't have it already).
+GrindGoalsDB = GrindGoalsDB or defaultGrindGoalsDB
+
 GrindGoalsAccountDB = GrindGoalsAccountDB or {
     warbandBankContents = {}
 }
-
 
 
 --[[ 
@@ -64,6 +52,28 @@ GrindGoalsAccountDB = GrindGoalsAccountDB or {
     * SECTION: functions
     **************************************************
 --]]
+
+-- Function to fix missing keys in the table by comparing it to default version
+--- @param table table
+--- @param defaultValues table
+local function fixCache(table, defaultValues)
+    for key, value in pairs(defaultValues) do
+        if table[key] == nil then
+            -- If the default value is a table, initialize it as a new table
+            if type(value) == "table" then
+                table[key] = {}
+                fixCache(table[key], value) -- Recursively fix nested tables
+            else
+                table[key] = value -- Set missing key to the default value
+            end
+            print("Fixed key:", key)
+        elseif type(value) == "table" and type(table[key]) ~= "table" then
+            -- If the existing key is not a table, replace it with a new table
+            table[key] = {}
+            fixCache(table[key], value) -- Recursively fix nested tables
+        end
+    end
+end
 
 -- *** Count Items In Bags ***
 
@@ -466,15 +476,15 @@ GrindGoals.frames.mainFrame.itemNumberWantedString:SetPoint("TOPLEFT", GrindGoal
 GrindGoals.frames.mainFrame.itemNumberWantedString:SetText("How many do you need:")
 
 GrindGoals.frames.itemNumberWantedBox = CreateFrame("EditBox", "NumberOfKillsToAnnounceBox", GrindGoals.frames.mainFrame, "InputBoxTemplate") -- Edit box to put the number of items to farm in
-GrindGoals.frames.itemNumberWantedBox:SetSize(35, 15)
+GrindGoals.frames.itemNumberWantedBox:SetSize(40, 15)
 GrindGoals.frames.itemNumberWantedBox:SetPoint("LEFT", GrindGoals.frames.mainFrame.itemNumberWantedString, "RIGHT", 10, 0)
-GrindGoals.frames.itemNumberWantedBox:SetMaxLetters(4)
+GrindGoals.frames.itemNumberWantedBox:SetMaxLetters(5)
 GrindGoals.frames.itemNumberWantedBox:SetAutoFocus(false)
 GrindGoals.frames.itemNumberWantedBox:SetText(tostring(GrindGoalsDB.itemNumberWanted))
 
 GrindGoals.frames.itemNumberWantedBox:SetScript("OnEnter", function(self)    -- Tooltip for the box
     GameTooltip:SetOwner(self, "ANCHOR_RIGHT")
-    GameTooltip:SetText("How many items do you wish to have, 1-9999", nil, nil, nil, nil, true)
+    GameTooltip:SetText("How many items do you wish to have, 1-99999", nil, nil, nil, nil, true)
 end)
 GrindGoals.frames.itemNumberWantedBox:SetScript("OnLeave", function(self)
     GameTooltip:Hide()        
@@ -701,8 +711,16 @@ local eventListenerFrame = CreateFrame("Frame", "GrindGoalsEventListenerFrame", 
 
 local function eventHandler(self, event, ...)
 
+    -- *** On addon load ***
+
     if event == "ADDON_LOADED" and ... == "GrindGoals" then
+        --Check for missing keys in saved table
+        fixCache(GrindGoalsDB, defaultGrindGoalsDB)  
+
+        --Greetings message
         print("|cFF00FF00[GrindGoals]|r:  GrindGoals is successfully loaded. Type |cFF00FF00/gg|r to open addon window.")
+
+        --Info on current progress if farming is on
         if GrindGoalsDB.isGrinding then
             print(GrindGoals.functions.nowGrindingmessageString())
         end
@@ -714,8 +732,13 @@ local function eventHandler(self, event, ...)
 
     -- *** Announcments on getting items ***
 
-    if event == "BAG_UPDATE" and GrindGoalsDB.isGrinding then --This event fites when bags are updated, t.ex. player acquires an item
+    if event == "BAG_UPDATE" and GrindGoalsDB.isGrinding then --This event fires when bags are updated, t.ex. player acquires an item
         local itemNumberAfterUpdate = GrindGoals.functions.countItemsPayerHas(GrindGoalsDB.itemToFarmID)
+        local nextAnnounceGoal = (
+            GrindGoalsDB.itemNumberPlayerHas - 
+            (GrindGoalsDB.itemNumberPlayerHas % GrindGoalsDB.settings.numItemsToAnnounce) +
+            GrindGoalsDB.settings.numItemsToAnnounce
+        )
         if itemNumberAfterUpdate > GrindGoalsDB.itemNumberPlayerHas then
             GrindGoalsDB.itemNumberPlayerHas = itemNumberAfterUpdate
 
@@ -741,7 +764,7 @@ local function eventHandler(self, event, ...)
             elseif (  -- Announce every N item acquisiton if this setting is checked
                 GrindGoalsDB.settings.announceEveryNItem and
                 GrindGoalsDB.settings.numItemsToAnnounce ~= 0 and
-                GrindGoalsDB.itemNumberPlayerHas % GrindGoalsDB.settings.numItemsToAnnounce == 0
+                GrindGoalsDB.itemNumberPlayerHas >= nextAnnounceGoal
             ) then
 
                 if GrindGoalsDB.settings.announceInChat then

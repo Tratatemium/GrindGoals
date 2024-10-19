@@ -103,6 +103,8 @@ GrindGoals.frames.settingsFrame.announceInChatCheckBox:SetScript("OnClick", func
     GrindGoalsDB.settings.announceInChat = self:GetChecked()
 end)
 
+-- *** Announce on screen ***
+
 GrindGoals.frames.settingsFrame.announceOnScreenCheckBox = CreateFrame("CheckButton", "announceOnScreenCheckBox", GrindGoals.frames.settingsFrame, "UICheckButtonTemplate")
 GrindGoals.frames.settingsFrame.announceOnScreenCheckBox:SetPoint("TOPLEFT", GrindGoals.frames.settingsFrame.announceInChatCheckBox, "TOPLEFT", 0, -25)
 GrindGoals.frames.settingsFrame.announceOnScreenCheckBox.Text:SetText("Announce on screen")
@@ -111,12 +113,48 @@ GrindGoals.frames.settingsFrame.announceOnScreenCheckBox:SetScript("OnClick", fu
     GrindGoalsDB.settings.announceOnScreen = self:GetChecked()
 end)
 
+-- *** Play the sound ***
+
 GrindGoals.frames.settingsFrame.playSoundCheckBox = CreateFrame("CheckButton", "playSoundCheckBox", GrindGoals.frames.settingsFrame, "UICheckButtonTemplate")
 GrindGoals.frames.settingsFrame.playSoundCheckBox:SetPoint("TOPLEFT", GrindGoals.frames.settingsFrame.announceOnScreenCheckBox, "TOPLEFT", 0, -25)
 GrindGoals.frames.settingsFrame.playSoundCheckBox.Text:SetText("Play sound")
 GrindGoals.frames.settingsFrame.playSoundCheckBox:SetScript("OnClick", function(self)
-    PlaySound(808)
+    PlaySound(808)    
     GrindGoalsDB.settings.playSound = self:GetChecked()
 end)
 
+-- Button to play test the sound
+local playSoundButton = CreateFrame("Button", "playSoundButton", GrindGoals.frames.settingsFrame)
+playSoundButton:SetSize(25, 25)
+playSoundButton:SetPoint("CENTER", GrindGoals.frames.settingsFrame.playSoundCheckBox, "CENTER", 90, 0)
 
+playSoundButton.backgroundTexture = playSoundButton:CreateTexture(nil, "BACKGROUND")
+playSoundButton.backgroundTexture:SetPoint("CENTER", playSoundButton, "CENTER", 0, 0)
+playSoundButton.backgroundTexture:SetTexture("Interface\\CHATFRAME\\ChatFrame")
+playSoundButton.backgroundTexture:SetTexCoord(0.515, 0.625, 0.48, 0.69)
+playSoundButton.backgroundTexture:SetSize(25, 25)
+playSoundButton:SetNormalTexture(playSoundButton.backgroundTexture)
+
+playSoundButton.pushedTexture = playSoundButton:CreateTexture(nil, "BACKGROUND")
+playSoundButton.pushedTexture:SetPoint("CENTER", playSoundButton, "CENTER", 0, 0)
+playSoundButton.pushedTexture:SetTexture("Interface\\CHATFRAME\\ChatFrame")
+playSoundButton.pushedTexture:SetTexCoord(0.876, 1, 0, 0.25)
+playSoundButton.pushedTexture:SetSize(25, 25)
+playSoundButton:SetPushedTexture(playSoundButton.pushedTexture)
+
+playSoundButton.highlightTexture = playSoundButton:CreateTexture(nil, "HIGHLIGHT")
+playSoundButton.highlightTexture:SetPoint("CENTER", playSoundButton, "CENTER", 0, 0)
+playSoundButton.highlightTexture:SetTexture("Interface\\CHATFRAME\\ChatFrame")
+playSoundButton.highlightTexture:SetTexCoord(0.515, 0.625, 0.48, 0.69)
+playSoundButton.highlightTexture:SetSize(25, 25)
+playSoundButton.highlightTexture:SetBlendMode("ADD")
+
+playSoundButton.overlayTexture = playSoundButton:CreateTexture(nil, "OVERLAY")
+playSoundButton.overlayTexture:SetPoint("CENTER", playSoundButton, "CENTER", 0, 0)
+playSoundButton.overlayTexture:SetTexture("Interface\\CHATFRAME\\ChatFrame")
+playSoundButton.overlayTexture:SetTexCoord(0.756, 0.874 , 0, 0.25)
+playSoundButton.overlayTexture:SetSize(16, 16)
+
+playSoundButton:SetScript("OnClick", function ()
+    PlaySound(8459)
+end)
