@@ -15,7 +15,7 @@
 
 -- Global variable so other addons / scripts could adress main code
 GrindGoals = GrindGoals or {
-    frames={}, functions={},
+    frames={}, functions={}, movement={},
     topmostFrame = nil,             -- This global is for saving which frame displays on top
     itemOfInterestID = nil
 }
@@ -232,19 +232,90 @@ GrindGoals.frames.mainFrame.title:SetPoint("TOP", GrindGoals.frames.mainFrame.Ti
 GrindGoals.frames.mainFrame.title:SetText("GrindGoals")
 -- GrindGoals.frames.mainFrame:SetClipsChildren(true) -- Prevents rendering outside the frame
 GrindGoals.frames.mainFrame:Hide() -- Frame is hidden by default
+
+-- Adding frame to WoW special list to make it closeable by Esc
+table.insert(UISpecialFrames, "GrindGoalsMainFrame")
+
+-- Making addon recognize slash commands.
+SLASH_GRINDGOALS1 = "/gg"
+SlashCmdList["GRINDGOALS"] = function(msg)
+    if msg == "" then
+        if GrindGoals.frames.mainFrame:IsShown() then
+            GrindGoals.frames.mainFrame:Hide()
+        else
+            GrindGoals.frames.mainFrame:Show()
+        end
+    else
+        -- If invalid argument is provided
+        print("Invalid command usage.")
+    end
+end
+
+--[[ 
+    **************************************************
+    * SECTION: moving mainFrame
+    **************************************************
+--]]
+
 -- Making frame movable
 GrindGoals.frames.mainFrame:EnableMouse(true)
 GrindGoals.frames.mainFrame:SetMovable(true)
-GrindGoals.frames.mainFrame:RegisterForDrag("LeftButton")
-GrindGoals.frames.mainFrame:SetScript("OnDragStart", function(self)
-    self:StartMoving()
-end)
-GrindGoals.frames.mainFrame:SetScript("OnDragStop", function(self)
-	self:StopMovingOrSizing()
-end)
+-- Clamp the frame to the screen
+GrindGoals.frames.mainFrame:SetClampedToScreen(true)
 
--- Display frame on top if interracted with
-GrindGoals.frames.mainFrame:SetScript("OnMouseDown", function(self)
+-- Variables to store initial drag offset
+GrindGoals.movement = {}
+GrindGoals.movement.isDragging = false
+GrindGoals.movement.dragStartX, GrindGoals.movement.dragStartY = 0, 0
+GrindGoals.movement.frameStartX, GrindGoals.movement.frameStartY = 0, 0
+
+-- Function to start dragging, with precise offset calculation
+function GrindGoals.functions.StartDrag(mainFrame)
+    local x, y = GetCursorPosition()
+    local scale = mainFrame:GetEffectiveScale()
+
+    -- Store where the cursor was when dragging started
+    GrindGoals.movement.dragStartX, GrindGoals.movement.dragStartY = x / scale, y / scale
+
+    -- Store the frame's position at the start of the drag
+    GrindGoals.movement.frameStartX, GrindGoals.movement.frameStartY = mainFrame:GetLeft(), mainFrame:GetBottom()
+
+    GrindGoals.movement.isDragging = true
+
+    -- Ensure that OnUpdate runs to move the frame
+    mainFrame:SetScript("OnUpdate", function(self)
+        GrindGoals.functions.OnUpdate(self)
+    end)
+end
+
+-- Function to stop dragging
+function GrindGoals.functions.StopDrag(mainFrame)
+    GrindGoals.movement.isDragging = false
+    -- Stop the OnUpdate script when dragging stops
+    mainFrame:SetScript("OnUpdate", nil)
+end
+
+-- Function to update the frame position during drag
+function GrindGoals.functions.OnUpdate(mainFrame)
+    if GrindGoals.movement.isDragging then
+        local x, y = GetCursorPosition()
+        local scale = mainFrame:GetEffectiveScale()
+
+        -- Calculate the new position
+        local newX = GrindGoals.movement.frameStartX + (x / scale - GrindGoals.movement.dragStartX)
+        local newY = GrindGoals.movement.frameStartY + (y / scale - GrindGoals.movement.dragStartY)
+
+        -- Move the frame to the new position
+        mainFrame:ClearAllPoints()
+        mainFrame:SetPoint("BOTTOMLEFT", UIParent, "BOTTOMLEFT", newX, newY)
+    end
+end
+
+GrindGoals.frames.mainFrame:SetScript("OnMouseDown", function(self, button)
+    if button == "LeftButton" then
+        GrindGoals.functions.StartDrag(self)
+    end
+    -- Display frame on top if interracted with
     if ((
         not GrindGoals.frames.itemSelectionFrame:IsShown()) and 
         (not GrindGoals.frames.wrongNumberFrame:IsShown()) and
@@ -254,28 +325,13 @@ GrindGoals.frames.mainFrame:SetScript("OnMouseDown", function(self)
     end
 end)
 
--- Adding frame to WoW special list to make it closeable by Esc
-table.insert(UISpecialFrames, "GrindGoalsMainFrame")
-
-
--- Making addon recognize slash commands.
-SLASH_GRINDGOALS1 = "/gg"
-SLASH_GRINDGOALS2 = "/grind"
-SlashCmdList["GRINDGOALS"] = function(msg)
-    if msg == "" then
-        if GrindGoals.frames.mainFrame:IsShown() then
-            GrindGoals.frames.mainFrame:Hide()
-        else
-            GrindGoals.frames.mainFrame:Show()
-        end
-    elseif msg == "settings" then
-        -- If the 'settings' argument is provided, open the settings
-        SlashCmdList["MYADDONSETTINGS"]()
-    else
-        -- If invalid argument is provided
-        print("Invalid command usage.")
+GrindGoals.frames.mainFrame:SetScript("OnMouseUp", function(self, button)
+    if button == "LeftButton" then 
+        GrindGoals.functions.StopDrag(self)
+        self:SetUserPlaced(true)  -- Save the new position
     end
-end
+end)
+
 
 --[[ 
     **************************************************
@@ -610,12 +666,14 @@ local function createTabs(tabs)
         tabButtons[i].normalTexture:SetPoint("BOTTOMRIGHT", tabButtons[i], "BOTTOMRIGHT", 5, -5)
         tabButtons[i].normalTexture:SetTexture("Interface\\PaperDollInfoFrame\\UI-Character-InactiveTab")
         tabButtons[i]:SetNormalTexture(tabButtons[i].normalTexture)
+        tabButtons[i]:GetNormalTexture():SetDrawLayer("BACKGROUND")
 
         tabButtons[i].disabledTexture = tabButtons[i]:CreateTexture(nil, "BACKGROUND")
         tabButtons[i].disabledTexture:SetPoint("TOPLEFT", tabButtons[i], "TOPLEFT", -5, 0)
         tabButtons[i].disabledTexture:SetPoint("BOTTOMRIGHT", tabButtons[i], "BOTTOMRIGHT", 5, -35)
         tabButtons[i].disabledTexture:SetTexture("Interface\\PaperDollInfoFrame\\UI-Character-ActiveTab")
         tabButtons[i]:SetDisabledTexture(tabButtons[i].disabledTexture)
+        tabButtons[i]:GetDisabledTexture():SetDrawLayer("ARTWORK")
 
         tabButtons[i].highlightTexture = tabButtons[i]:CreateTexture(nil, "HIGHLIGHT")
         tabButtons[i].highlightTexture:SetTexture("Interface\\PaperDollInfoFrame\\UI-Character-InactiveTab")

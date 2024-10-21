@@ -19,15 +19,20 @@ GrindGoals.frames.settingsFrame:Hide() -- Frame is hidden by default
 -- Making frame movable
 GrindGoals.frames.settingsFrame:EnableMouse(true)
 
+-- Settings frame - forwarding drag actions to the parent (main frame)
+GrindGoals.frames.settingsFrame:EnableMouse(true)
 GrindGoals.frames.settingsFrame:SetScript("OnMouseDown", function(self, button)
     if button == "LeftButton" then
-        GrindGoals.frames.mainFrame:StartMoving()
+        -- Forward dragging to the parent frame
+        GrindGoals.functions.StartDrag(GrindGoals.frames.mainFrame)
     end
 end)
 
 GrindGoals.frames.settingsFrame:SetScript("OnMouseUp", function(self, button)
     if button == "LeftButton" then
-        GrindGoals.frames.mainFrame:StopMovingOrSizing()
+        -- Forward stop drag action to the parent frame
+        GrindGoals.functions.StopDrag(GrindGoals.frames.mainFrame)
+        GrindGoals.frames.mainFrame:SetUserPlaced(true)
     end
 end)
 
@@ -56,6 +61,16 @@ GrindGoals.frames.settingsFrame:SetScript("OnShow", function()
     GrindGoals.frames.settingsFrame.announceInChatCheckBox:SetChecked(GrindGoalsDB.settings.announceInChat)
     GrindGoals.frames.settingsFrame.announceOnScreenCheckBox:SetChecked(GrindGoalsDB.settings.announceOnScreen)
     GrindGoals.frames.settingsFrame.playSoundCheckBox:SetChecked(GrindGoalsDB.settings.playSound)
+
+    -- Set correct leveling (to avoid bugs with dynamic frame creation)
+    local function SetFrameLevelForChildren(parentFrame, levelOffset)
+        local children = { parentFrame:GetChildren() }  -- Get all child frames of the parent
+    
+        for _, child in ipairs(children) do
+            child:SetFrameLevel(parentFrame:GetFrameLevel() + levelOffset)  -- Set level higher than parent
+        end
+    end
+    SetFrameLevelForChildren(GrindGoals.frames.settingsFrame, 1)
 end)
 
 --*** Announce every N items acquierd ***
@@ -68,7 +83,7 @@ GrindGoals.frames.settingsFrame.announceEveryNItemCheckBox:SetScript("OnClick", 
     GrindGoalsDB.settings.announceEveryNItem = self:GetChecked()
 end)
 
-GrindGoals.frames.settingsFrame.numItemsToAnnounceBox = CreateFrame("EditBox", "numItemsToAnnounceBox", GrindGoals.frames.settingsFrame.announceEveryNItemCheckBox, "InputBoxTemplate")
+GrindGoals.frames.settingsFrame.numItemsToAnnounceBox = CreateFrame("EditBox", "numItemsToAnnounceBox", GrindGoals.frames.settingsFrame, "InputBoxTemplate")
 GrindGoals.frames.settingsFrame.numItemsToAnnounceBox:SetSize(35, 15)
 GrindGoals.frames.settingsFrame.numItemsToAnnounceBox:SetPoint("CENTER", GrindGoals.frames.settingsFrame.announceEveryNItemCheckBox, "LEFT", 138, 0)
 GrindGoals.frames.settingsFrame.numItemsToAnnounceBox:SetMaxLetters(4)
@@ -90,7 +105,7 @@ GrindGoals.frames.settingsFrame.numItemsToAnnounceBox:SetScript("OnTextChanged",
         self:SetText(newText)
         self:ClearFocus()
     end
-    GrindGoalsDB.settings.numItemsToAnnounce = tonumber(self:GetText())
+    GrindGoalsDB.settings.numItemsToAnnounce = tonumber(self:GetText()) or 0
 end)
 
 -- *** Announce in chat ***
