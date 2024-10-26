@@ -790,14 +790,16 @@ local function eventHandler(self, event, ...)
 
     -- *** Announcments on getting items ***
 
-    if event == "BAG_UPDATE" and GrindGoalsDB.isGrinding then --This event fires when bags are updated, t.ex. player acquires an item
+
+    if event == "BAG_UPDATE_DELAYED" and GrindGoalsDB.isGrinding then --This event fires when bags are updated, t.ex. player acquires an item
+        
         local itemNumberAfterUpdate = GrindGoals.functions.countItemsPayerHas(GrindGoalsDB.itemToFarmID)
         local nextAnnounceGoal = (
             GrindGoalsDB.itemNumberPlayerHas - 
             (GrindGoalsDB.itemNumberPlayerHas % GrindGoalsDB.settings.numItemsToAnnounce) +
             GrindGoalsDB.settings.numItemsToAnnounce
         )
-        if itemNumberAfterUpdate > GrindGoalsDB.itemNumberPlayerHas then
+        if itemNumberAfterUpdate ~= GrindGoalsDB.itemNumberPlayerHas then
             GrindGoalsDB.itemNumberPlayerHas = itemNumberAfterUpdate
 
             if GrindGoalsDB.itemNumberPlayerHas >= GrindGoalsDB.itemNumberWanted then -- If the goal is reached
@@ -869,8 +871,10 @@ end
 eventListenerFrame:SetScript("OnEvent", eventHandler)
 eventListenerFrame:RegisterEvent("ADDON_LOADED")
 eventListenerFrame:RegisterEvent("BAG_UPDATE")
+eventListenerFrame:RegisterEvent("BAG_UPDATE_DELAYED")
 
 eventListenerFrame:RegisterEvent("BANKFRAME_OPENED")
 eventListenerFrame:RegisterEvent("BANKFRAME_CLOSED")
 eventListenerFrame:RegisterEvent("PLAYERBANKSLOTS_CHANGED")
 eventListenerFrame:RegisterEvent("PLAYERREAGENTBANKSLOTS_CHANGED")
+
